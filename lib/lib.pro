@@ -1,3 +1,5 @@
+include(../config.pri)
+
 TEMPLATE = lib
 
 QT += network
@@ -10,8 +12,8 @@ TARGET = ether
 HEADERS += \
     datatypes.h \
     etherpadapi.h \
+    log.h \
     utils.h
 
-SOURCES += \
-    datatypes.cpp \
-    etherpadapi.cpp
+initLib()
+

@@ -1,11 +1,13 @@
-TEMPLATE = app
+include (../config.pri)
 
 INCLUDEPATH += ../lib
 
 QT += testlib network widgets
-
-TARGET = unittest
+CONFIG += console
 
 SOURCES += main.cpp
 
-LIBS += -L../lib/debug -lether
+TARGET = unittest
+
+initApp(ether)
+
