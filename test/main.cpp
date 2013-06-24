@@ -1,4 +1,3 @@
-#include <etherpadapi.h>
 #include "testutil.h"
 #include <utils.h>
 #include <log.h>
@@ -34,31 +33,6 @@ namespace QTest {
 	}
 }
 
-class TestObj : public QObject
-{
-Q_OBJECT
-
-public Q_SLOTS:
-	void groupResponse(const ApiResponse &, const GroupID id) { gId = id; }
-	void sessionResponse(const ApiResponse &, const SessionID id) { sessions.push_back(id); }
-	void createAuthorResponse(const ApiResponse &, const AuthorID & id) {authors.push_back(id); }
-
-public:
-	GroupID gId;
-	QVector<AuthorID> authors;
-	QVector<SessionID> sessions;
-};
-
-#define WAIT_UNTIL(g, maxTime) \
-{ \
-	QElapsedTimer timer; \
-	timer.start(); \
-	while(timer.elapsed() < maxTime) { \
-		qApp->processEvents(); \
-		if (g) break; \
-	} \
-} \
-
 void testJSONParsing(const QString & data, const ApiResponse & expectedResponse, const GroupID & expectedGroupID )
 {
 	QJsonParseError error;
@@ -88,6 +62,11 @@ class BasicTests : public QObject
 	Q_OBJECT
 private Q_SLOTS:
 
+	void base36Test() {
+		QCOMPARE(Util::base36enc(1000000000L), QByteArray("gjdgxs"));
+		QCOMPARE(Util::base36dec(Util::base36enc(1000000000L)), 1000000000ULL);
+	}
+
 	void JSONParsing() {
 		testJSONParsing(QString::fromUtf8("{\"code\":0, \"message\":\"ok\", \"data\": {\"padID\": \"g.s8oes9dhwrvt0zif$test\"}}"), ApiResponse(0, "ok"), "g.s8oes9dhwrvt0zif$test");
 		testJSONParsing(QString::fromUtf8("{\"code\":1, \"message\":\"pad does already exist\", \"data\": null}"), ApiResponse(1, "pad does already exist"), QString());
@@ -103,7 +82,6 @@ private Q_SLOTS:
 	}
 
 	void parseListOfSessionInfosTest() {
-
 		const int validInfo1 = 1372093134;
 		SessionInfo expectedInfo1("g.I4celRPygwriFJof", "a.8aXLnNIzoiDLx8M2", validInfo1);
 		const QString sessionInfo1("{\"groupID\":\""+expectedInfo1.groupID+"\",\"authorID\":\""+expectedInfo1.authorID+"\",\"validUntil\":"+QString::number(validInfo1)+"}");
@@ -122,38 +100,13 @@ private Q_SLOTS:
 		QMap<SessionID,SessionInfo> info = Util::getListOfSessionInfos(jsonObj);
 		QCOMPARE(info, expectedInfo);
 	}
-
-	void listSessionsOfGroupTest()
-	{
-		EtherPadApi api;
-		TestObj testObj;
-		testObj.connect(&api, SIGNAL(createGroupResponse(ApiResponse,GroupID)), &testObj, SLOT(groupResponse(ApiResponse,GroupID)));
-		testObj.connect(&api, SIGNAL(createSessionResponse(ApiResponse,SessionID)), &testObj, SLOT(sessionResponse(ApiResponse,SessionID)));
-		testObj.connect(&api, SIGNAL(createAuthorResponse(ApiResponse,AuthorID)), &testObj, SLOT(createAuthorResponse(ApiResponse,AuthorID)));
-		api.createGroup();
-
-		WAIT_UNTIL(!testObj.gId.isEmpty(), 1000);
-		QVERIFY(!testObj.gId.isEmpty());
-		api.createAuthor("Author1");
-		api.createAuthor("Author2");
-		WAIT_UNTIL(testObj.authors.size() == 2, 1000);
-		QCOMPARE(testObj.authors.size(), 2);
-
-		const QDateTime validity = QDateTime::currentDateTime().addDays(1);
-		api.createSession(testObj.gId, testObj.authors[0], validity);
-		api.createSession(testObj.gId, testObj.authors[1], validity);
-		WAIT_UNTIL(testObj.sessions.size() == 2, 1000);
-		QCOMPARE(testObj.sessions.size(), 2);
-
-		api.listSessionsOfGroup(testObj.gId);
-	}
 };
-
-int main(int argc, char *argv[]) {
-	QApplication app(argc, argv);
-	TestUtil::TestRegistry::getInstance()->runTests(argc, argv);
-}
 
 REGISTER_TEST(BasicTests);
 #include "main.moc"
 
+int main(int argc, char *argv[])
+{
+	QApplication app(argc, argv);
+	TestUtil::TestRegistry::getInstance()->runTests(argc, argv);
+}
