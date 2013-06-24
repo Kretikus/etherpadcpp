@@ -88,16 +88,6 @@ class BasicTests : public QObject
 	Q_OBJECT
 private Q_SLOTS:
 
-	void loggingTest()
-	{
-		int val  = 888;
-		int val2 = 777;
-		LOG_TRACE("TEST %1%", val);
-		LOG_TRACE("Another %1% Test with %2%", val, val2);
-		
-		QCOMPARE(log::filenameSubStr("/usr/local/impl.data"), "impl.data");
-	}
-
 	void JSONParsing() {
 		testJSONParsing(QString::fromUtf8("{\"code\":0, \"message\":\"ok\", \"data\": {\"padID\": \"g.s8oes9dhwrvt0zif$test\"}}"), ApiResponse(0, "ok"), "g.s8oes9dhwrvt0zif$test");
 		testJSONParsing(QString::fromUtf8("{\"code\":1, \"message\":\"pad does already exist\", \"data\": null}"), ApiResponse(1, "pad does already exist"), QString());

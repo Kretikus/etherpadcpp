@@ -9,7 +9,8 @@ HEADERS += testutil.h
 
 SOURCES += \
 	main.cpp \
-	testutil.cpp
+	testutil.cpp \
+	log_test.cpp \
 
 TARGET = unittest
 
