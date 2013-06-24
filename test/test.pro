@@ -5,7 +5,11 @@ INCLUDEPATH += ../lib
 QT += testlib network widgets
 CONFIG += console
 
-SOURCES += main.cpp
+HEADERS += testutil.h
+
+SOURCES += \
+	main.cpp \
+	testutil.cpp
 
 TARGET = unittest
 

@@ -1,4 +1,5 @@
 #include <etherpadapi.h>
+#include "testutil.h"
 #include <utils.h>
 #include <log.h>
 
@@ -158,7 +159,11 @@ private Q_SLOTS:
 	}
 };
 
-QTEST_MAIN(BasicTests);
+int main(int argc, char *argv[]) {
+	QApplication app(argc, argv);
+	TestUtil::TestRegistry::getInstance()->runTests(argc, argv);
+}
 
+REGISTER_TEST(BasicTests);
 #include "main.moc"
 
