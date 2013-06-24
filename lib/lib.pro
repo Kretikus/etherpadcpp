@@ -13,7 +13,8 @@ HEADERS += \
     datatypes.h \
     etherpadapi.h \
     log.h \
-    utils.h
+    utils.h \
+    websocket.h \
 
 initLib()
 
