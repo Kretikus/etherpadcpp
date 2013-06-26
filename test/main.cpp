@@ -33,6 +33,16 @@ namespace QTest {
 	}
 }
 
+QJsonObject getObjectFromString(const QString & data) {
+	QJsonParseError error;
+	QJsonDocument doc = QJsonDocument::fromJson(data.toUtf8(), &error);
+	if (error.error != QJsonParseError::NoError) {
+		qDebug("There was an error reading the reply at position %d: %d %s", (int)error.offset, (int)error.error, qPrintable(error.errorString()));
+		return QJsonObject();
+	}
+	return doc.object();
+}
+
 void testJSONParsing(const QString & data, const ApiResponse & expectedResponse, const GroupID & expectedGroupID )
 {
 	QJsonParseError error;
@@ -41,7 +51,7 @@ void testJSONParsing(const QString & data, const ApiResponse & expectedResponse,
 		qDebug("There was an error reading the reply at position %d: %d %s", (int)error.offset, (int)error.error, qPrintable(error.errorString()));
 		return;
 	}
-	const QJsonObject jsonObj = doc.object();
+	const QJsonObject jsonObj = getObjectFromString(data);
 	const ApiResponse response(jsonObj.value("code").toDouble(), jsonObj.value("message").toString());
 	const QJsonValue dataObj = jsonObj.value("data");
 	QJsonObject payload;

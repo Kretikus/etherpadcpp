@@ -10,6 +10,7 @@ INCLUDEPATH += .
 TARGET = ether
 
 HEADERS += \
+    changeset.h \
     datatypes.h \
     etherpadapi.h \
     log.h \
