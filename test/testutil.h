@@ -1,6 +1,11 @@
 #pragma once
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-private-field"
+
 #include <QTest>
+
+#pragma clang diagnostic pop
 
 namespace TestUtil {
 
