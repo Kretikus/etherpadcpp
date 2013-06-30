@@ -60,5 +60,30 @@ int getCharDeleteCount(const QStringRef & oldText, const QStringRef & newText);
 Changeset optimizeChangeset(const Changeset & changeset, const QString & oldText, const QString & newText);
 }
 
-
 Changeset createChangeset(const QString & oldText, const QString & newText);
+
+
+namespace JS {
+QString newLines(const QString & text);
+
+class DiffOutData {
+public:
+	DiffOutData() : row(-1) {}
+	DiffOutData(const QString & t) : text(t), row(-1) {}
+	DiffOutData(const QString & t, int r) : text(t), row(r) {}
+
+	bool operator ==(const DiffOutData & rhs) const {
+		return text == rhs.text && row == rhs.row;
+	}
+
+	bool isValid() const { return row != 1; }
+
+	QString text;
+	int row;
+};
+typedef QVector<DiffOutData> DiffOut;
+
+QPair<DiffOut, DiffOut> diff(const QStringList & oldText, const QStringList & newText);
+Changeset createChangeset(const QString & oldText, const QString & newText);
+}
+

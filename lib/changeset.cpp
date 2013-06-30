@@ -177,57 +177,81 @@ Changeset createChangeset(const QString & oldText, const QString & newText)
 	return detail::optimizeChangeset(changeset, oldText, newText);
 }
 
+
+QString JS::newLines(const QString & text)
+{
+	const int count = text.count('\n');
+	if (count == 0) return QString();
+	return '|' + packNum( count );
+}
+
+class Rows {
+public:
+	Rows() : o(0) {}
+	QVector<int> rows;
+	void * o;
+};
+
+static bool isValid(JS::DiffOut & o, int i)
+{
+	if (i<0) return false;
+	return i < o.size();
+}
+
+QPair<JS::DiffOut,JS::DiffOut> JS::diff(const QStringList & oldTextLines, const QStringList & newTextLines)
+{
+	typedef QMap<QString, Rows> String2Row;
+	String2Row ns;
+	String2Row os;
+
+	DiffOut oDo;
+	std::copy(oldTextLines.begin(), oldTextLines.end(), std::back_inserter(oDo));
+	DiffOut nDo;
+	std::copy(newTextLines.begin(), newTextLines.end(), std::back_inserter(nDo));
+
+	for (int i=0; i<newTextLines.size(); ++i) {
+		ns[newTextLines[i]].rows.append(i);
+	}
+
+	for  (int i=0; i<oldTextLines.size(); ++i) {
+		os[oldTextLines[i]].rows.append(i);
+	}
+
+	Q_FOREACH (const QString & sin, ns.keys()){
+		if (ns[sin].rows.size() == 1 && os.contains(sin) && os[sin].rows.size() == 1) {
+			const int nsIdx = ns[sin].rows[0];
+			const int osIdx = os[sin].rows[0];
+			nDo[nsIdx] = DiffOutData(newTextLines[nsIdx], osIdx);
+			oDo[osIdx] = DiffOutData(oldTextLines[osIdx], nsIdx);
+		}
+	}
+	for (int i=0; i<nDo.size()-1; ++i){
+		if (isValid(nDo, i) && isValid(nDo, i+1) && nDo[i].row + 1 < oDo.size()
+				&& oDo[nDo[i].row+1].isValid() && nDo[i+1] == oDo[nDo[i].row+1])
+		{
+			nDo[i+1]          = DiffOutData(newTextLines[i+1], nDo[i].row+1);
+			oDo[nDo[i].row+1] = DiffOutData(oldTextLines[nDo[i].row+1], i+1);
+		}
+	}
+	for(int i=nDo.size(); i>0; --i){
+		if(isValid(nDo, i) && isValid(nDo, i-1) && nDo[i].row > 0 && 
+		   isValid(oDo, nDo[i].row-1) && nDo[i-1] == oDo[nDo[i].row-1]) 
+		{
+			nDo[i-1] = DiffOutData(newTextLines[i-1], nDo[i].row-1);
+			oDo[nDo[i].row-1] = DiffOutData(oldTextLines[nDo[i].row-1], i-1);
+		}
+	}
+	return qMakePair(oDo, nDo);
+}
+
+Changeset JS::createChangeset(const QString & oldText, const QString & newText)
+{
+	if (oldText.isEmpty() && newText.isEmpty()) return Changeset();
+
+	return Changeset();
+}
+
 /**
-	function _newlines(t) {
-        var newlines = t.match(/\n/g);
-        if (newlines == null) {
-            return '';
-        }
-        return '|' + packNum(newlines.length);
-    }
-
-	function _diff(o, n){
-        var ns = {};
-        var os = {};
-        var i;
-        var x = null;
-        for (i=0; i<n.length; i++) {
-            if (ns[n[i]] == x) {
-                ns[n[i]] = {rows:[], o:x};
-            }
-            ns[n[i]].rows.push(i)
-        }
-        for (i=0; i<o.length; i++) {
-            if(os[o[i]] == x) {
-                os[o[i]] = {rows:[], n:x};
-            }
-            os[o[i]].rows.push(i);
-        }
-        for (i in ns){
-            if (ns[i].rows.length == 1 && typeof(os[i]) != 'undefined' && os[i].rows.length == 1) {
-                n[ns[i].rows[0]] = {text:n[ns[i].rows[0]], row:os[i].rows[0]};
-                o[os[i].rows[0]] = {text:o[os[i].rows[0]], row:ns[i].rows[0]};
-            }
-        }
-        for (i=0; i<n.length-1; i++){
-            if (n[i].text != x && n[i+1].text == x && n[i].row + 1 < o.length
-                && o[n[i].row+1].text == x && n[i+1]==o[n[i].row+1]) {
-                n[i+1] = {text:n[i+1], row:n[i].row+1};
-                o[n[i].row+1] = {text:o[n[i].row+1], row:i+1};
-            }
-        }
-        for(i=n.length-1; i>0; i--){
-            if(n[i].text!=x && n[i-1].text==x && n[i].row>0 && o[n[i].row-1].text==x &&
-            n[i-1] == o[n[i].row-1]) {
-                n[i-1] = {text:n[i-1], row:n[i].row - 1};
-                o[n[i].row-1] = {text:o[n[i].row-1], row:i - 1};
-            }
-        }
-        return {o:o, n:n}
-    }
-
-var packNum = function(num) { return num.toString(36).toLowerCase(); };
-
 
 function generateChangeset(oldText, newText){
 
@@ -340,3 +364,4 @@ function generateChangeset(oldText, newText){
     return result;
 }
 */
+

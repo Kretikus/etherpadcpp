@@ -17,6 +17,17 @@ char *toString(const Attribute & attr)
 					+")";
 	return qstrdup(s.toLatin1().data());
 }
+
+template<>
+char *toString(const JS::DiffOut & d)
+{
+	QString s;
+	foreach (const JS::DiffOutData & data, d) {
+		s += "[";
+		s += data.text + ", " + QString::number(data.row) + "]";
+	}
+	return qstrdup(s.toLatin1().data());
+}
 }
 
 QJsonObject getObjectFromString(const QString & data); // defined in main.cpp
@@ -99,6 +110,34 @@ private Q_SLOTS:
 			QCOMPARE(detail::getMaxPrefix(&l, &r), 2);
 		}
 		
+	}
+
+
+	void JS_diffTest()
+	{
+		{
+			QStringList o = {"foo"};
+			QStringList n = {"foo"};
+			JS::DiffOut oDo;
+			oDo.append(JS::DiffOutData("foo", 0));
+			QCOMPARE(JS::diff(o, n).first, oDo);
+			QCOMPARE(JS::diff(o, n).second, oDo);
+		}
+
+		{
+			QStringList o = {"<p>Hello","World</p>\n\n"};
+			QStringList n = {"<p>Hello","My","World</p>\n\n"};
+			JS::DiffOut oDo;
+			oDo.append( JS::DiffOutData("<p>Hello", 0));
+			oDo.append( JS::DiffOutData("World</p>\n\n", 2));
+			QCOMPARE(JS::diff(o, n).first, oDo);
+			
+			JS::DiffOut nDo;
+			nDo.append(JS::DiffOutData("<p>Hello",0));
+			nDo.append(JS::DiffOutData("My"));
+			nDo.append(JS::DiffOutData("World</p>\n\n",1));
+			QCOMPARE(JS::diff(o, n).second, nDo);
+		}
 	}
 };
 
