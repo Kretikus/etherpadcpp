@@ -64,7 +64,7 @@ Changeset createChangeset(const QString & oldText, const QString & newText);
 
 
 namespace JS {
-QString newLines(const QString & text);
+void newLines(Changeset::Ops ops, const QString & text);
 
 class DiffOutData {
 public:
@@ -85,5 +85,6 @@ typedef QVector<DiffOutData> DiffOut;
 
 QPair<DiffOut, DiffOut> diff(const QStringList & oldText, const QStringList & newText);
 Changeset createChangeset(const QString & oldText, const QString & newText);
+Changeset optimizeChangeset(const QString & oldText, const Changeset & changeset);
 }
 

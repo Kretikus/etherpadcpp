@@ -178,13 +178,6 @@ Changeset createChangeset(const QString & oldText, const QString & newText)
 }
 
 
-QString JS::newLines(const QString & text)
-{
-	const int count = text.count('\n');
-	if (count == 0) return QString();
-	return '|' + packNum( count );
-}
-
 class Rows {
 public:
 	Rows() : o(0) {}
@@ -244,11 +237,169 @@ QPair<JS::DiffOut,JS::DiffOut> JS::diff(const QStringList & oldTextLines, const 
 	return qMakePair(oDo, nDo);
 }
 
+void JS::newLines(Changeset::Ops ops, const QString & text)
+{
+	const int count = text.count('\n');
+	if (count == 0) return;
+	ops.append(qMakePair(Changeset::NewLine, count));
+}
+
+
+Changeset JS::optimizeChangeset(const QString & oldText, const Changeset & changeset) {
+
+//  var append_part = function(changeset, part) {
+//    var packNum = function(num) { return num.toString(36).toLowerCase(); };
+//    for (var i = 0; i < part.attribs.length; i++) {
+//      changeset += "*" + part.attribs[i];
+//    }
+//    if (part.newlines > 0)
+//      changeset += "|" + packNum(part.newlines);
+//    changeset += part.op + packNum(part.len);
+//    return changeset
+//  };
+
+//  var compareAttribs = function(attribs1, attribs2) {
+//    attribs1 = attribs1.slice(0);
+//    attribs2 = attribs2.slice(0);
+//    if (attribs1.length != attribs2.length)
+//      return false;
+//    for (var i = 0; i < attribs1.length; i++)
+//      if (attribs1[i] != attribs2[i])
+//        return false;
+//    return true;
+//  };
+
+//  var collapse = function(changeset) {
+//    parsed = parseChangeset(changeset);
+//    collapsed = parsed.prefix;
+//    var prevPart = null;
+//    for (var part = parsed.ops.next(); part != null; part = parsed.ops.next()) {
+//      if (prevPart && prevPart.op == part.op && compareAttribs(prevPart.attribs, part.attribs)) {
+//        prevPart.len += part.len;
+//        prevPart.newlines += part.newlines;
+//      } else {
+//        if (prevPart) {
+//          collapsed = append_part(collapsed, prevPart);
+//          prevPart = null;
+//        }
+//        prevPart = part;
+//      }
+//    }
+//    if (prevPart && prevPart.op != "=")
+//      collapsed = append_part(collapsed, prevPart);
+//    collapsed += "$" + parsed.bank;
+
+//    return collapsed;
+	return Changeset();
+  };
+
+
 Changeset JS::createChangeset(const QString & oldText, const QString & newText)
 {
 	if (oldText.isEmpty() && newText.isEmpty()) return Changeset();
 
-	return Changeset();
+	QPair<JS::DiffOut,JS::DiffOut> out = JS::diff(oldText.split(" "), newText.split(" "));
+
+	Changeset::Ops ops;
+	
+	int oSpace = oldText.count(" ");
+	int nSpace = newText.count(" ");
+
+	JS::DiffOut & outO = out.first;
+	JS::DiffOut & outN = out.second;
+
+	const QString sp = " ";
+
+	// Deletion from the beginning of the string
+	if (outN[0].row != 0) {
+		for(int n=0; n<outO.size() && outO[n].row == -1; ++n) {
+			QString currentText = outO[n].text + (n >= oSpace ? "" : sp);
+			JS::newLines(ops, currentText);
+			ops.append(qMakePair(Changeset::SkipOverChars, currentText.length()));
+		}
+	}
+
+	QString bank;
+	
+	// Iterate over tokens in new text
+	for (int i=0; i<outN.size(); ++i) {
+
+		Changeset::Ops potentialOps;
+		
+		// Addition (token in new text does not exist in old)
+		if (outN[i].row == -1) {
+			const QString currentText = outN[i].text + (i >= nSpace ? "" : sp);
+			ops += potentialOps;
+			potentialOps.clear();
+			ops.append(qMakePair(Changeset::Attrib, 0));
+			JS::newLines(ops, currentText);
+			ops.append(qMakePair(Changeset::InsertChars, currentText.length()));
+			bank += currentText;
+		} else {
+			Changeset::Ops dels;
+			int nextWordInOldPos = outN[i].row + 1;
+
+			// Deletion Check
+			// 
+			// If the next word has been deleted from the old text, check to see
+			// if we're also missing the space following this word
+			//
+			if (nextWordInOldPos < outO.size() && outO[nextWordInOldPos].row == -1 &&
+				i >= nSpace) {
+				dels.append(qMakePair(Changeset::SkipOverChars, 1));;
+			}
+			
+			//
+			// Check old text tokens starting with the one corresponding to the position
+			// after our current word, and for each of them that's deleted, append
+			// the deletion operator to a temporary variable that we'll dump in a moment
+			//
+			for (int n = nextWordInOldPos; n < outO.size() && outO[n].row == -1; ++n) {
+				const QString currentText = outO[n].text + (n >= oSpace ? "" : sp);
+				JS::newLines(dels, currentText);
+				dels.append(qMakePair(Changeset::SkipOverChars, currentText.length()));
+			}
+			
+			// Writing Operators
+
+			//
+			// Add the skip operator to our holding variable for skips, unless we've
+			// got deletions from the previous step, in which case dump all the skip
+			// operators into the changeset, followed by the deletion operators
+			//
+			QString currentText = outN[i].text;
+			if ( (i + 1) < outN.size() && outN[i + 1].row == -1 && 
+					outN[i].row >= oSpace) {
+				//dels = '*0+1' + dels;
+				dels.prepend(qMakePair(Changeset::InsertChars, 1));
+				dels.prepend(qMakePair(Changeset::Attrib, 0));
+				bank += " ";
+			} else {
+				currentText += (i >= nSpace) ? "" : sp;
+			}
+			if (dels.isEmpty()) {
+				JS::newLines(potentialOps, currentText);
+				potentialOps.append(qMakePair(Changeset::KeepChars, currentText.length()));
+			} else {
+				ops += potentialOps;
+				potentialOps.clear();
+				JS::newLines(ops, currentText);
+				ops.append(qMakePair(Changeset::KeepChars, currentText.length()));
+				ops += dels;
+			}
+		}
+	}
+
+//	result = optimizeChangeset(oldText, str);
+
+//	if (applyChangeset(oldText, result) != newText) {
+//		func = alert;
+//		//func = console.log;
+//		func("Changeset Generation Failed! Application yields '" + 
+//			  applyChangeset(oldText, result) + "' instead of '" + newText + "'");
+//	}
+
+	return Changeset(oldText.length(), newText.length(), ops, bank);
 }
 
 /**
