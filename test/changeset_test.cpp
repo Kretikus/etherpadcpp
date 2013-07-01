@@ -76,6 +76,7 @@ private Q_SLOTS:
 #define OPS Changeset::Ops()
 #define INSERT(num, n, a)  << qMakePair(Changeset::InsertChars, Changeset::OperationData(num, n, a))
 #define KEEP(num)          << qMakePair(Changeset::KeepChars,   Changeset::OperationData(num, -1, -1))
+#define SKIP(num, n, a)    << qMakePair(Changeset::SkipOverChars, Changeset::OperationData(num, n, a))
 #define KEEPNL(num, n)     << qMakePair(Changeset::KeepChars,   Changeset::OperationData(num, n, -1))
 
 	void changesetToStringTest_data() {
@@ -84,6 +85,7 @@ private Q_SLOTS:
 
 		QTest::newRow("Identity (no change)")            << "Z:3>0$"          << Changeset(3, 3, OPS, "");
 		QTest::newRow("Single letter append")            << "Z:2>1=1*0+1$o"   << Changeset(2, 3, OPS KEEP(1) INSERT(1, -1 , 0), "o");
+		QTest::newRow("Single letter skip")              << "Z:2>1=1*0-1$o"   << Changeset(2, 3, OPS KEEP(1) SKIP(1, -1 , 0), "o");
 		QTest::newRow("Three letter append")             << "Z:3>3=3*0+3$bar" << Changeset(3, 6, OPS KEEP(3) INSERT(3, -1, 0), "bar");
 		QTest::newRow("Insert at beginning")             << "Z:6>3*0+3$foo"   << Changeset(6, 9, OPS INSERT(3, -1, 0), "foo");
 		QTest::newRow("Three letter insert to center")   << "Z:6>3=3*0+3$bar" << Changeset(6, 9, OPS KEEP(3) INSERT(3, -1, 0), "bar");
@@ -115,12 +117,20 @@ private Q_SLOTS:
 
 	void JS_collapseTest_data()
 	{
-	
+		QTest::addColumn<QString  >("before");
+		QTest::addColumn<QString>("after");
+
+		QTest::newRow("Simple Test")  << "Z:3>3=3*0+1+1$bar"   << "Z:3>3=3*0+2$bar";
+		QTest::newRow("Newline Test") << "Z:3>3=3*0|1+1+1$bar" << "Z:3>3=3*0|1+2$bar";
+		QTest::newRow("Skip and Newline Test") << "Z:3>3=3*0|1-1-1$bar" << "Z:3>3=3*0|1-2$bar";
 	}
 
 	void JS_collapseTest()
 	{
-	
+		QFETCH(QString,   before);
+		QFETCH(QString, after);
+
+		QCOMPARE(JS::collapse(Changeset::fromString(before)).toString(), after);
 	}
 
 	void JS_diffTest()

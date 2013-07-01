@@ -86,7 +86,7 @@ Changeset Changeset::fromString(const QString & str)
 	}
 	pos += sizesExpression.matchedLength();
 
-	QRegExp opsMatch("([=+-\\*\\|]\\w+)");
+	QRegExp opsMatch("([=\\+\\-\\*\\|]\\w+)");
 	int newLines = -1;
 	int attrib = -1;
 	while (opsMatch.indexIn(str, pos) != -1) {
@@ -358,17 +358,19 @@ Changeset JS::collapse(const Changeset & changeset)
 	collapsed.ops_.clear();
 	for (auto it = changeset.ops_.begin(); it != changeset.ops_.end(); ++it)
 	{
-		auto nextIt = it + 1;
+		const auto nextIt = it + 1;
+		
 		if (nextIt != changeset.ops_.end() && it->first == nextIt->first) {
 			Changeset::Op collapsedOp = *it;
 			collapsedOp.second.opLength += nextIt->second.opLength;
-			collapsedOp.second.newlines += nextIt->second.newlines;
+			if(nextIt->second.newlines != -1) {
+				collapsedOp.second.newlines += nextIt->second.newlines;
+			}
 			collapsed.ops_.append(collapsedOp);
 			++it; // skip 2
 		} else {
 			collapsed.ops_.append(*it);
 		}
-		++it;
 	}
 	return collapsed;
 }
