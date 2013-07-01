@@ -306,52 +306,6 @@ int JS::newLines(const QString & text)
 	return count;
 }
 
-
-//  var append_part = function(changeset, part) {
-//    var packNum = function(num) { return num.toString(36).toLowerCase(); };
-//    for (var i = 0; i < part.attribs.length; i++) {
-//      changeset += "*" + part.attribs[i];
-//    }
-//    if (part.newlines > 0)
-//      changeset += "|" + packNum(part.newlines);
-//    changeset += part.op + packNum(part.len);
-//    return changeset
-//  };
-
-//  var compareAttribs = function(attribs1, attribs2) {
-//    attribs1 = attribs1.slice(0);
-//    attribs2 = attribs2.slice(0);
-//    if (attribs1.length != attribs2.length)
-//      return false;
-//    for (var i = 0; i < attribs1.length; i++)
-//      if (attribs1[i] != attribs2[i])
-//        return false;
-//    return true;
-//  };
-
-//  var collapse = function(changeset) {
-//    parsed = parseChangeset(changeset);
-//    collapsed = parsed.prefix;
-//    var prevPart = null;
-//    for (var part = parsed.ops.next(); part != null; part = parsed.ops.next()) {
-//      if (prevPart && prevPart.op == part.op && compareAttribs(prevPart.attribs, part.attribs)) {
-//        prevPart.len += part.len;
-//        prevPart.newlines += part.newlines;
-//      } else {
-//        if (prevPart) {
-//          collapsed = append_part(collapsed, prevPart);
-//          prevPart = null;
-//        }
-//        prevPart = part;
-//      }
-//    }
-//    if (prevPart && prevPart.op != "=")
-//      collapsed = append_part(collapsed, prevPart);
-//    collapsed += "$" + parsed.bank;
-
-//    return collapsed;
-
-
 Changeset JS::collapse(const Changeset & changeset)
 {
 	Changeset collapsed = changeset;
@@ -381,12 +335,11 @@ Changeset JS::optimizeChangeset(const QString & oldText, const Changeset & chang
 	do {
 		beforeOptimizing = newChangeset;
 		newChangeset = JS::collapse(newChangeset);
-//		newChangeset = optimize(newChangeset);
-//		newChangeset = collapse(newChangeset);
+		newChangeset = JS::optimize(newChangeset, oldText);
+		newChangeset = JS::collapse(newChangeset);
 	} while(newChangeset != beforeOptimizing);
 	return newChangeset;
-};
-
+}
 
 Changeset JS::createChangeset(const QString & oldText, const QString & newText)
 {
@@ -477,7 +430,9 @@ Changeset JS::createChangeset(const QString & oldText, const QString & newText)
 		}
 	}
 
-//	result = optimizeChangeset(oldText, str);
+	
+	Changeset result(oldText.length(), newText.length(), ops, bank);
+	result = JS::optimizeChangeset(oldText, result);
 
 //	if (applyChangeset(oldText, result) != newText) {
 //		func = alert;
@@ -486,120 +441,111 @@ Changeset JS::createChangeset(const QString & oldText, const QString & newText)
 //			  applyChangeset(oldText, result) + "' instead of '" + newText + "'");
 //	}
 
-	return Changeset(oldText.length(), newText.length(), ops, bank);
+	return result;
 }
 
-/**
+Changeset JS::optimize(const Changeset & changeset, const QString & oldText) 
+{
+	QString changesetBank = changeset.bank_;
+	
+	QString text = oldText;
 
-function generateChangeset(oldText, newText){
+	Changeset optimized(changeset.oldLength_, changeset.newLength_, Changeset::Ops(), QString());
 
-  if (newText == null || oldText == null)
-    alert("Null text: ");
+	const Changeset::Ops::ConstIterator opsEnd = changeset.ops_.end();
+	Changeset::Ops::ConstIterator prevPart = opsEnd;
 
-    var str = 'Z:' + packNum(oldText.length);
-    str += newText.length >= oldText.length 
-        ? '>' + packNum(newText.length - oldText.length) 
-        : '<' + packNum(oldText.length - newText.length); 
-    
-    // Contains two sequences of tokens representing the substrings with relations to each other
-    var out = _diff(oldText == '' ? [] : oldText.split(/ /), newText == '' ? [] : newText.split(/ /));
-    var pot = '';
-    var potentialStr = '';
-    var currentText;
-    var oSpace = oldText.match(/ /g);
-    var nSpace = newText.match(/ /g);
+	for (auto it = changeset.ops_.begin(); it != opsEnd; ++it) {
+		if (prevPart != opsEnd && it->first == Changeset::KeepChars) {
+			QString textPart = text.mid(0, prevPart->second.opLength);
+			QString potPart = changeset.bank_.mid(0, it->second.opLength);
 
-    if (oSpace == null) {
-        oSpace=[];
-    }
+			int i = textPart.length()-1;
+			int j = potPart.length()-1;
+			int  newlines = 0;
+			//console.log(JSON.stringify({i: i, j: j}));
+			//console.log(JSON.stringify({textPart: textPart, potPart: potPart}));
+			while ((i >= 0) && (j > 0) && (textPart[i] == potPart[i])) {
+				if (textPart[i] == '\n') {
+					newlines++;
+				}
+				--i;
+				--j;
+			}
+			const int len = textPart.length() - 1 - i;
+			//console.log(JSON.stringify({i: i, j: j, len: len}));
+			
+			Changeset::Op prevOp = *prevPart;
+			prevOp.second.opLength -= len;
+			prevOp.second.newlines -= newlines;
 
-    if (nSpace == null) {
-        nSpace=[];
-    }
-    
-    // Deletion from the beginning of the string
-    if (out.n[0].row != 0) {
-        for(n=0; n<out.o.length && out.o[n].text==null; n++) {
-            currentText = out.o[n] + (n >= oSpace.length ? '' : oSpace[n]);
-            str += _newlines(currentText) + '-' + packNum(currentText.length);
-        }
-    }
+			Changeset::Op curOp  = *it;
+			curOp.second.opLength -= len;
+			curOp.second.newlines -= newlines;
 
-    // Iterate over tokens in new text
-    for (var i=0; i<out.n.length; i++) {
+			const Changeset::Op newOpPost(qMakePair(Changeset::KeepChars, Changeset::OperationData(len, newlines, -1)));
 
-        // Addition (token in new text does not exist in old)
-        if (out.n[i].text == null) {
-            currentText = out.n[i] + (i >= nSpace.length ? '' : nSpace[i]);
-            str += potentialStr;
-            str += '*0' + _newlines(currentText) + '+' + packNum(currentText.length);
-            potentialStr = '';
-            pot += currentText;
-        
-        // Skip, but may also be followed by deletions
-        } else {
-            var dels = '';
-            var nextWordInOldPos = out.n[i].row + 1;
+			textPart = textPart.mid(0, i+1);
+			potPart  = potPart.mid(0, j+1);
 
-            // Deletion Check
+			i = 0;
+			newlines = 0;
+			for (i = 0; (i < textPart.length()) && (i < potPart.length()) && textPart[i] == potPart[i] ; ++i) {
+				if (textPart[i] == '\n')
+					++newlines;
+			}
+			if (i > 0) {
+				//console.log("big i");
+				prevOp.second.opLength -= i;
+				prevOp.second.newlines -= newlines;
+				curOp.second.opLength -= i;
+				curOp.second.newlines -= newlines;
+				const Changeset::Op newOp(qMakePair(Changeset::KeepChars, Changeset::OperationData(i, newlines, -1)));
+				optimized.ops_.push_back(newOp);
+				text = text.mid(i);
+			}
 
-            // 
-            // If the next word has been deleted from the old text, check to see
-            // if we're also missing the space following this word
-            //
-            if (nextWordInOldPos < out.o.length && 
-                    out.o[nextWordInOldPos].text == null && i 
-                    >= nSpace.length) {
-                dels += '-1';
-            }
+			if (prevOp.second.opLength > 0) {
+				optimized.ops_.push_back(prevOp);
+				text = text.mid(prevOp.second.opLength);
+			}
+			if (it->second.opLength > 0)
+			  optimized.ops_.push_back(*it);
+			if (newOpPost.second.opLength > 0)
+				optimized.ops_.push_back(newOpPost);
+		
+			optimized.bank_ += changesetBank.mid(i, i + it->second.opLength);
+			//console.log(JSON.stringify({i: i, partlen: part.len}));
+			//console.log(pot);
+			changesetBank = changesetBank.mid(i + it->second.opLength + len);
+			prevPart = changeset.ops_.end();
+		} else {
+			if (prevPart != opsEnd) {
+				//unoptimized '-' op
+				text = text.mid(prevPart->second.opLength);
+				optimized.ops_.push_back(*prevPart);
+				prevPart = opsEnd;
+			}
+			switch (it->first) {
+				case Changeset::KeepChars:
+					text = text.mid(it->second.opLength);
+					optimized.ops_.push_back(*it);
+					break;
+				case Changeset::InsertChars:
+					optimized.bank_ += changesetBank.mid(0, it->second.opLength);
+					changesetBank = changesetBank.mid(it->second.opLength);
+					optimized.ops_.push_back(*it);
+					break;
+				case Changeset::SkipOverChars:
+					prevPart = it;
+					break;
+			}
+		}
+	}
+	if (prevPart)
+		optimized.ops_.push_back(*prevPart);
 
-            //
-            // Check old text tokens starting with the one corresponding to the position
-            // after our current word, and for each of them that's deleted, append
-            // the deletion operator to a temporary variable that we'll dump in a moment
-            //
-            for (n = nextWordInOldPos; n < out.o.length && out.o[n].text == null; n++) {
-                currentText = out.o[n] + (n >= oSpace.length ? '' : oSpace[n]);
-                dels += _newlines(currentText) + '-' + packNum(currentText.length);
-            }
+	//console.log("--End Optimize--");
 
-            // Writing Operators
-
-            //
-            // Add the skip operator to our holding variable for skips, unless we've
-            // got deletions from the previous step, in which case dump all the skip
-            // operators into the changeset, followed by the deletion operators
-            //
-            currentText = out.n[i].text;
-            if (i + 1 < out.n.length && out.n[i + 1].text == null && 
-                    out.n[i].row >= oSpace.length) {
-                dels = '*0+1' + dels;
-                pot += ' ';
-            } else {
-                currentText += (i >= nSpace.length ? '' : nSpace[i]);
-            }
-            if (dels == '') {
-                potentialStr += _newlines(currentText) + '=' + packNum(currentText.length);
-            } else {
-                str += potentialStr;
-                str += _newlines(currentText) + '=' + packNum(currentText.length) + dels;
-                potentialStr = '';
-            }
-        }
-    }
-
-    str = str + '$' + pot;
-
-    result = optimizeChangeset(oldText, str);
-
-    if (applyChangeset(oldText, result) != newText) {
-      func = alert;
-      //func = console.log;
-        func("Changeset Generation Failed! Application yields '" + 
-              applyChangeset(oldText, result) + "' instead of '" + newText + "'");
-    }
-
-    return result;
+	return optimized;
 }
-*/
-

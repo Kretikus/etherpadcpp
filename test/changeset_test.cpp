@@ -55,14 +55,14 @@ private Q_SLOTS:
 
 		QTest::newRow("Identity (no change)")          << "foo" << "foo" << "Z:3>0$";
 		QTest::newRow("Single letter append")          << "fo" << "foo" << "Z:2>1=1*0+1$o";
-//		QTest::newRow("Three letter append")           << "foo" << "foobar" << "Z:3>3=3*0+3$bar";
-//		QTest::newRow("Insert at beginning")           << "barbaz" << "foobarbaz" << "Z:6>3*0+3$foo";
-//		QTest::newRow("Three letter insert to center") << "foobaz " << "foobarbaz" << "Z:6>3=3*0+3$bar";
-//		QTest::newRow("Many letter append")            << "foo" << "foobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobar" << "Z:3>1r=3*0+1r$barfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobar";
-//		QTest::newRow("Empty string append")           << "" << "foobar" << "Z:0>6*0+6$foobar";
-//		QTest::newRow("Word append")                   << "foo bar baz" << "foo extra bar baz" << "Z:b>6=4*0+6$extra ";
-//		QTest::newRow("Word append on new line")       << "foo\nbar\nbaz\n" << "foo\nbar\nbing\nbaz\n" << "Z:c>5|1=7*0|1+5$\nbing";
-//		QTest::newRow("Multiple whitespace characters ") << "foo\n bar " << "foo\n baz\nbar " << "Z:8>4|1=5*0|1+4$baz\n";
+		QTest::newRow("Three letter append")           << "foo" << "foobar" << "Z:3>3=3*0+3$bar";
+		QTest::newRow("Insert at beginning")           << "barbaz" << "foobarbaz" << "Z:6>3*0+3$foo";
+		QTest::newRow("Three letter insert to center") << "foobaz " << "foobarbaz" << "Z:6>3=3*0+3$bar";
+		QTest::newRow("Many letter append")            << "foo" << "foobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobar" << "Z:3>1r=3*0+1r$barfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobar";
+		QTest::newRow("Empty string append")           << "" << "foobar" << "Z:0>6*0+6$foobar";
+		QTest::newRow("Word append")                   << "foo bar baz" << "foo extra bar baz" << "Z:b>6=4*0+6$extra ";
+		QTest::newRow("Word append on new line")       << "foo\nbar\nbaz\n" << "foo\nbar\nbing\nbaz\n" << "Z:c>5|1=7*0|1+5$\nbing";
+		QTest::newRow("Multiple whitespace characters ") << "foo\n bar " << "foo\n baz\nbar " << "Z:8>4|1=5*0|1+4$baz\n";
 	}
 
 	void generateChangesetTest() {
