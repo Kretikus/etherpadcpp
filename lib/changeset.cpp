@@ -65,6 +65,55 @@ QString Changeset::toString() const
 	return ret;
 }
 
+Changeset Changeset::fromString(const QString & str)
+{
+	Changeset changeset;
+	if (!str.startsWith("Z:")) return changeset;
+
+	QRegExp sizesExpression("^Z:(\\w+)([><])(\\w+)");
+	int pos = sizesExpression.indexIn(str);
+	if (pos != 0) return changeset;
+	const QStringList captured = sizesExpression.capturedTexts();
+	if (sizesExpression.captureCount() != 3) return changeset;
+
+	changeset.oldLength_ = Util::base36dec(captured[1].toLatin1());
+	const int sizeDiff = Util::base36dec(captured[3].toLatin1());
+	changeset.newLength_ = changeset.oldLength_;
+	if (captured[2] == ">") {
+		changeset.newLength_ += sizeDiff;
+	} else {
+		changeset.newLength_ -= sizeDiff;
+	}
+	pos += sizesExpression.matchedLength();
+
+	QRegExp opsMatch("([=+-\\*\\|]\\w+)");
+	int newLines = -1;
+	int attrib = -1;
+	while (opsMatch.indexIn(str, pos) != -1) {
+		QString op = opsMatch.capturedTexts().at(1);
+		QChar c = op[0];
+		const int opLength = Util::base36dec(op.mid(1).toLatin1());
+		if (c == '|') {
+			if(newLines == -1) newLines = 0;
+			newLines += opLength;
+		} else if (c == '*') {
+			attrib = opLength;
+		} else if (c == '=') {
+			changeset.ops_.append(qMakePair(Changeset::KeepChars, Changeset::OperationData(opLength, newLines, attrib)));
+			newLines = -1; attrib = -1;
+		} else if (c == '+') {
+			changeset.ops_.append(qMakePair(Changeset::InsertChars, Changeset::OperationData(opLength, newLines, attrib)));
+			newLines = -1; attrib = -1;
+		} else if (c == '-') {
+			changeset.ops_.append(qMakePair(Changeset::SkipOverChars, Changeset::OperationData(opLength, newLines, attrib)));
+			newLines = -1; attrib = -1;
+		}
+		pos += opsMatch.matchedLength();
+	}
+	changeset.bank_ = str.mid(pos+1);
+
+	return changeset;
+}
 
 int detail::getMaxPrefix(const QStringRef & oldText, const QStringRef & newText)
 {
@@ -257,7 +306,6 @@ int JS::newLines(const QString & text)
 	return count;
 }
 
-Changeset JS::optimizeChangeset(const QString & oldText, const Changeset & changeset) {
 
 //  var append_part = function(changeset, part) {
 //    var packNum = function(num) { return num.toString(36).toLowerCase(); };
@@ -302,8 +350,40 @@ Changeset JS::optimizeChangeset(const QString & oldText, const Changeset & chang
 //    collapsed += "$" + parsed.bank;
 
 //    return collapsed;
-	return Changeset();
-  };
+
+
+Changeset JS::collapse(const Changeset & changeset)
+{
+	Changeset collapsed = changeset;
+	collapsed.ops_.clear();
+	for (auto it = changeset.ops_.begin(); it != changeset.ops_.end(); ++it)
+	{
+		auto nextIt = it + 1;
+		if (nextIt != changeset.ops_.end() && it->first == nextIt->first) {
+			Changeset::Op collapsedOp = *it;
+			collapsedOp.second.opLength += nextIt->second.opLength;
+			collapsedOp.second.newlines += nextIt->second.newlines;
+			collapsed.ops_.append(collapsedOp);
+			++it; // skip 2
+		} else {
+			collapsed.ops_.append(*it);
+		}
+		++it;
+	}
+	return collapsed;
+}
+
+Changeset JS::optimizeChangeset(const QString & oldText, const Changeset & changeset) {
+	Changeset newChangeset = changeset;
+	Changeset beforeOptimizing;
+	do {
+		beforeOptimizing = newChangeset;
+		newChangeset = JS::collapse(newChangeset);
+//		newChangeset = optimize(newChangeset);
+//		newChangeset = collapse(newChangeset);
+	} while(newChangeset != beforeOptimizing);
+	return newChangeset;
+};
 
 
 Changeset JS::createChangeset(const QString & oldText, const QString & newText)

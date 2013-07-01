@@ -93,6 +93,7 @@ private Q_SLOTS:
 		QTest::newRow("Word append")                     << "Z:b>6=4*0+6$extra" << Changeset(11, 17, OPS KEEP(4) INSERT(6, -1, 0), "extra");
 		QTest::newRow("Word append on new line")         << "Z:c>5|1=7*0|1+5$\nbing" << Changeset(12, 17, OPS KEEPNL(7, 1) INSERT(5, 1, 0), "\nbing");
 		QTest::newRow("Multiple whitespace characters ") << "Z:8>4|1=5*0|1+4$baz\n"  << Changeset(8, 12, OPS KEEPNL(5, 1) INSERT(4, 1, 0), "baz\n");
+		QTest::newRow("Multiple whitespace characters ") << "Z:9k<4o|1=5*0|1+4$baz\n"  << Changeset(344, 176, OPS KEEPNL(5, 1) INSERT(4, 1, 0), "baz\n");
 	}
 	
 	void changesetToStringTest() {
@@ -100,6 +101,7 @@ private Q_SLOTS:
 		QFETCH(Changeset, changeset);
 
 		QCOMPARE(changeset.toString(), changesetString);
+		QCOMPARE(Changeset::fromString(changesetString).toString(), changeset.toString());
 	}
 
 	void miscStringToolTest() {
@@ -111,6 +113,15 @@ private Q_SLOTS:
 		
 	}
 
+	void JS_collapseTest_data()
+	{
+	
+	}
+
+	void JS_collapseTest()
+	{
+	
+	}
 
 	void JS_diffTest()
 	{

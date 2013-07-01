@@ -36,6 +36,13 @@ public:
 		OperationData() : opLength(-1), newlines(-1), attrib(-1) {}
 		OperationData(int opLength, int newLines, int attrib)
 			: opLength(opLength), newlines(newLines), attrib(attrib) {}
+		bool operator ==(const OperationData & rhs) const {
+			return opLength == rhs.opLength && newlines == rhs.newlines && attrib == rhs.attrib;
+		}
+		bool operator !=(const OperationData & rhs) const {
+				return !operator==(rhs);
+		}
+	public:
 		int opLength;
 		int newlines;
 		int attrib;
@@ -57,6 +64,17 @@ public:
 
 	QString toString() const;
 
+	static Changeset fromString(const QString & str);
+
+	bool operator ==(const Changeset & rhs) const {
+		return oldLength_ == rhs.oldLength_ && newLength_ == rhs.newLength_ && 
+			ops_ == rhs.ops_ && bank_ == rhs.bank_;
+	}
+	bool operator !=(const Changeset & rhs) const {
+		return !operator==(rhs);
+	}
+
+public:
 	static const QString prefix;
 	int oldLength_;
 	int newLength_;
@@ -96,5 +114,7 @@ typedef QVector<DiffOutData> DiffOut;
 QPair<DiffOut, DiffOut> diff(const QStringList & oldText, const QStringList & newText);
 Changeset createChangeset(const QString & oldText, const QString & newText);
 Changeset optimizeChangeset(const QString & oldText, const Changeset & changeset);
+Changeset collapse(const Changeset & changeset);
+
 }
 
