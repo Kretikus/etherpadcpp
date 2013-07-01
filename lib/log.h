@@ -5,10 +5,13 @@
 #define LOG_LEVEL_TRACE 0
 #define LOG_LEVEL_INFO  1
 #define LOG_LEVEL_WARN  2
+#define LOG_LEVEL_HALT  3
 
 #define LOG_TRACE Log(LOG_LEVEL_TRACE, __FILE__, __LINE__)
-#define LOG_INFO  Log(LOG_LEVEL_TRACE, __FILE__, __LINE__)
-#define LOG_WARN  Log(LOG_LEVEL_TRACE, __FILE__, __LINE__)
+#define LOG_INFO  Log(LOG_LEVEL_WARN,  __FILE__, __LINE__)
+#define LOG_WARN  Log(LOG_LEVEL_HALT,  __FILE__, __LINE__)
+
+#define LOG_HALT  Log(LOG_LEVEL_HALT,  __FILE__, __LINE__, true)
 
 namespace LogDetails {
 	void output(QByteArray & msg, int val);
@@ -19,7 +22,11 @@ namespace LogDetails {
 class Log
 {
 public:
-	Log(int logLevel, const char* filename, int lineNo);
+	Log(int logLevel, const char* filename, int lineNo, bool halt = false);
+
+	void operator()(const char * str) const {
+		logImpl(QByteArray(str));
+	}
 
 	template<typename T1>
 		void operator()(const char * str, const T1 & t1) const {
@@ -57,10 +64,11 @@ public:
 			}
 
 private:
-		void logImpl(const QByteArray & msg) const { log(logLevel_, filename_, lineNo_, msg); }
-		static void log(int level, const char * file, int line, const QByteArray & msgContent);
+		void logImpl(const QByteArray & msg) const { log(logLevel_, filename_, lineNo_, halt_, msg); }
+		static void log(int level, const char * file, int line, bool halt, const QByteArray & msgContent);
 private:
 	int logLevel_;
 	const char* filename_;
 	int lineNo_;
+	bool halt_;
 };

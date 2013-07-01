@@ -1,5 +1,6 @@
 #include "changeset.h"
 #include "utils.h"
+#include "log.h"
 
 #include <QJsonArray>
 #include <QJsonObject>
@@ -36,6 +37,8 @@ static QChar getOperationChar(Changeset::Operation op) {
 		case Changeset::SkipOverChars: return '-';
 		case Changeset::KeepChars:     return '=';
 	}
+	LOG_HALT("Called with unknown Changeset::Operation");
+	return QChar();
 }
 
 const QString Changeset::prefix("Z:");

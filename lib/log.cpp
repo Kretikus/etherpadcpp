@@ -54,12 +54,12 @@ public:
 	QFile logFile_;
 };
 
-Log::Log(int logLevel, const char * filename, int lineNo)
-	: logLevel_(logLevel), filename_(filename), lineNo_(lineNo)
+Log::Log(int logLevel, const char * filename, int lineNo, bool halt)
+	: logLevel_(logLevel), filename_(filename), lineNo_(lineNo), halt_(halt)
 {
 }
 
-void Log::log(int level, const char * file, int line, const QByteArray & msgContent)
+void Log::log(int level, const char * file, int line, bool halt, const QByteArray & msgContent)
 {
 	QByteArray msg;
 	msg.reserve(256);
@@ -94,4 +94,8 @@ void Log::log(int level, const char * file, int line, const QByteArray & msgCont
 	LogImpl::instance()->logFile_.write(msg);
 	LogImpl::instance()->logFile_.write("\n");
 	LogImpl::instance()->logFile_.flush();
+
+	if(halt) {
+		Q_ASSERT(false);
+	}
 }
