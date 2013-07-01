@@ -29,39 +29,39 @@ public:
 	}
 
 	template<typename T1>
-		void operator()(const char * str, const T1 & t1) const {
-			QByteArray msg; msg.reserve(128);
-			const int strLen = strlen(str);
-			for(int i = 0; i < strLen; ++i) {
-				const char * pStr = str + i;
-				if (*pStr == '%' && strLen >= i+3 && *(pStr+1) == '1' && *(pStr+2) == '%') {
-					LogDetails::output(msg, t1);
-					i += 2;
-				} else {
-					msg.append(*pStr);
-				}
+	void operator()(const char * str, const T1 & t1) const {
+		QByteArray msg; msg.reserve(128);
+		const int strLen = strlen(str);
+		for(int i = 0; i < strLen; ++i) {
+			const char * pStr = str + i;
+			if (*pStr == '%' && strLen >= i+3 && *(pStr+1) == '1' && *(pStr+2) == '%') {
+				LogDetails::output(msg, t1);
+				i += 2;
+			} else {
+				msg.append(*pStr);
 			}
-			logImpl(msg);
 		}
+		logImpl(msg);
+	}
 
-		template<typename T1, typename T2>
-			void operator()(const char * str, const T1 & t1, const T2 & t2) const {
-				QByteArray msg; msg.reserve(128);
-				const int strLen = strlen(str);
-				for(int i = 0; i < strLen; ++i) {
-					const char * pStr = str + i;
-					if (*pStr == '%' && strLen >= i+3 && *(pStr+2) == '%') {
-						const char placeHolder = *(pStr+1);
-						if (placeHolder == '1') { LogDetails::output(msg, t1); }
-						else if (placeHolder == '2') { LogDetails::output(msg, t2); }
-						else qDebug("Unexpected placeholder '%c'", placeHolder);
-						i += 2;
-					} else {
-						msg.append(*pStr);
-					}
-				}
-				logImpl(msg);
+	template<typename T1, typename T2>
+	void operator()(const char * str, const T1 & t1, const T2 & t2) const {
+		QByteArray msg; msg.reserve(128);
+		const int strLen = strlen(str);
+		for(int i = 0; i < strLen; ++i) {
+			const char * pStr = str + i;
+			if (*pStr == '%' && strLen >= i+3 && *(pStr+2) == '%') {
+				const char placeHolder = *(pStr+1);
+				if (placeHolder == '1') { LogDetails::output(msg, t1); }
+				else if (placeHolder == '2') { LogDetails::output(msg, t2); }
+				else qDebug("Unexpected placeholder '%c'", placeHolder);
+				i += 2;
+			} else {
+				msg.append(*pStr);
 			}
+		}
+		logImpl(msg);
+	}
 
 private:
 		void logImpl(const QByteArray & msg) const { log(logLevel_, filename_, lineNo_, halt_, msg); }

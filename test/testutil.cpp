@@ -28,18 +28,19 @@ TestRegistry* TestRegistry::getInstance() {
 	return &registry;
 }
 
-void TestRegistry::registerTest( QString const& name, QObject* test ) {
-	impl_->tests_ << qMakePair(name, test );
+void TestRegistry::registerTest(QString const& name, QObject* test) {
+	impl_->tests_ << qMakePair(name, test);
 }
 
 void TestRegistry::printSuits()
 {
-	for( QList<Impl::Name2Test>::const_iterator it = impl_->tests_.begin(); it != impl_->tests_.end(); ++it ) {
-		printf( "%s", qPrintable( it->first ) );
-		if( it == impl_->tests_.begin() ) {
-			printf( " (Default)" );
+	for( QList<Impl::Name2Test>::const_iterator it = impl_->tests_.begin(); it != impl_->tests_.end(); ++it)
+	{
+		printf( "%s", qPrintable(it->first) );
+		if (it == impl_->tests_.begin()) {
+			printf(" (Default)");
 		}
-		printf( "\n" );
+		printf("\n");
 	}
 }
 
@@ -83,6 +84,5 @@ int TestRegistry::runTests(int argc, char* argv[])
 	}
 	return result;
 }
-
 
 }
