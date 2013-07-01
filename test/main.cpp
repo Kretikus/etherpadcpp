@@ -73,6 +73,7 @@ class BasicTests : public QObject
 private Q_SLOTS:
 
 	void base36Test() {
+		QCOMPARE(QString(Util::base36enc(1000000000L)), QString("gjdgxs"));
 		QCOMPARE(Util::base36enc(1000000000L), QByteArray("gjdgxs"));
 		QCOMPARE(Util::base36dec(Util::base36enc(1000000000L)), 1000000000ULL);
 	}

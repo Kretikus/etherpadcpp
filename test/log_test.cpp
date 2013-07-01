@@ -13,7 +13,7 @@ private Q_SLOTS:
 		LOG_TRACE("TEST %1%", val);
 		LOG_TRACE("Another %1% Test with %2%", val, val2);
 		
-		QCOMPARE(log::filenameSubStr("/usr/local/impl.data"), "impl.data");
+		QCOMPARE(LogDetails::filenameSubStr("/usr/local/impl.data"), "impl.data");
 	}
 };
 

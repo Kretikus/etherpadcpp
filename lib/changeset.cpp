@@ -35,8 +35,6 @@ static QChar getOperationChar(Changeset::Operation op) {
 		case Changeset::InsertChars:   return '+';
 		case Changeset::SkipOverChars: return '-';
 		case Changeset::KeepChars:     return '=';
-		case Changeset::NewLine:       return '|';
-		case Changeset::Attrib:        return '*';
 	}
 }
 
@@ -50,7 +48,14 @@ QString Changeset::toString() const
 				? '>' + packNum(newLength_ - oldLength_)
 				: '<' + packNum(oldLength_ - newLength_);
 	for (Ops::ConstIterator it = ops_.begin(); it != ops_.end(); ++it) {
-		ret += getOperationChar(it->first) + packNum(it->second);
+		const OperationData & opData = it->second;
+		if (opData.attrib != -1) {
+			ret += QChar('*') + packNum(opData.attrib);
+		}
+		if (opData.newlines != -1) {
+			ret += QChar('|') + packNum(opData.newlines);
+		}
+		ret += getOperationChar(it->first) + packNum(opData.opLength);
 	}
 	ret += "$";
 	ret += bank_;
@@ -84,19 +89,19 @@ Changeset detail::optimizeChangeset(const Changeset & changeset, const QString &
 	int nOff = 0;
 	for(int i = 0; i < cs.ops_.size(); ++i) {
 		const Changeset::Op & op = cs.ops_[i];
-		if (op.first == Changeset::KeepChars) { oOff += op.second; nOff += op.second; }
-		else if(op.first == Changeset::SkipOverChars) nOff += op.second;
+		if (op.first == Changeset::KeepChars) { oOff += op.second.opLength; nOff += op.second.opLength; }
+		else if(op.first == Changeset::SkipOverChars) nOff += op.second.opLength;
 		else if(op.first == Changeset::InsertChars) {
 			if ( (i-2) >= 0 && cs.ops_[i-2].first == Changeset::KeepChars) {
-				qDebug("OldStr: %s", qPrintable(oldText.mid(oOff-cs.ops_[i-2].second, oOff)));
-				qDebug("New: %s", qPrintable(newText.mid(nOff, op.second)));
+				qDebug("OldStr: %s", qPrintable(oldText.mid(oOff-cs.ops_[i-2].second.opLength, oOff)));
+				qDebug("New: %s", qPrintable(newText.mid(nOff, op.second.opLength)));
 			}
 		}
 	}
 
 	bool removeAllOps = true;
 	foreach(const Changeset::Op & op, cs.ops_) {
-		if (op.second != 0) removeAllOps = false;
+		if (op.second.opLength != 0) removeAllOps = false;
 	}
 	if (removeAllOps) cs.ops_ = Changeset::Ops();
 
@@ -119,8 +124,9 @@ Changeset createChangeset(const QString & oldText, const QString & newText)
 	int newOffset = 0;
 
 	if (oldText.isEmpty() && !newText.isEmpty()) {
-		if (!addedAttrib) { ops.append(qMakePair(Changeset::Attrib, 0)); addedAttrib = true; }
-		ops.append(qMakePair(Changeset::InsertChars, newText.length()));
+		int attrib = -1;
+		if (!addedAttrib) { attrib = 0; addedAttrib = true; }
+		ops.append(qMakePair(Changeset::InsertChars, Changeset::OperationData(newText.length(), -1, attrib)));
 		 bank += newText;
 	}
 
@@ -137,20 +143,23 @@ Changeset createChangeset(const QString & oldText, const QString & newText)
 		if (keep > 0) {
 			oldOffset += keep;
 			newOffset += keep;
-			if (oldOffset < oldText.length() || newOffset < newText.length()) ops.append(qMakePair(Changeset::KeepChars, keep));
+			if (oldOffset < oldText.length() || newOffset < newText.length()) {
+				ops.append(qMakePair(Changeset::KeepChars, Changeset::OperationData(keep, -1, -1)));
+			}
 		}
 
 		const int deleteCount = detail::getCharDeleteCount(QStringRef(&oldText, oldOffset, oldText.length() - oldOffset), QStringRef(&newText, newOffset, newText.length() - newOffset));
 		if (deleteCount > 0) {
 			newOffset += deleteCount;
-			ops.append(qMakePair(Changeset::SkipOverChars, deleteCount));
+			ops.append(qMakePair(Changeset::SkipOverChars, Changeset::OperationData(deleteCount, -1, -1)));
 		}
 
 //		qDebug("OldOffset: %d", oldOffset);
 		if (oldOffset >= oldText.length()) {
 			if (newText.length() - newOffset > 0) {
-				if (!addedAttrib) { ops.append(qMakePair(Changeset::Attrib, 0)); addedAttrib = true; }
-				ops.append(qMakePair(Changeset::InsertChars, newText.length() - newOffset));
+				int attrib = -1;
+				if (!addedAttrib) { attrib = 0; addedAttrib = true; }
+				ops.append(qMakePair(Changeset::InsertChars, Changeset::OperationData(newText.length() - newOffset, -1, attrib)));
 				const QString appendedText = newText.mid(newOffset);
 				bank += appendedText;
 				newOffset += appendedText.length();
@@ -162,8 +171,9 @@ Changeset createChangeset(const QString & oldText, const QString & newText)
 				++insertCount;
 			}
 			if (insertCount > 0) {
-				if (!addedAttrib) { ops.append(qMakePair(Changeset::Attrib, 0)); addedAttrib = true; }
-				ops.append(qMakePair(Changeset::InsertChars, insertCount));
+				int attrib = -1;
+				if (!addedAttrib) { attrib = 0; addedAttrib = true; }
+				ops.append(qMakePair(Changeset::InsertChars,  Changeset::OperationData(insertCount, -1, attrib)));
 				bank += newText.mid(newOffset, insertCount);
 				newOffset += insertCount;
 			}
@@ -237,13 +247,12 @@ QPair<JS::DiffOut,JS::DiffOut> JS::diff(const QStringList & oldTextLines, const 
 	return qMakePair(oDo, nDo);
 }
 
-void JS::newLines(Changeset::Ops ops, const QString & text)
+int JS::newLines(const QString & text)
 {
 	const int count = text.count('\n');
-	if (count == 0) return;
-	ops.append(qMakePair(Changeset::NewLine, count));
+	if (count == 0) return -1;
+	return count;
 }
-
 
 Changeset JS::optimizeChangeset(const QString & oldText, const Changeset & changeset) {
 
@@ -314,8 +323,7 @@ Changeset JS::createChangeset(const QString & oldText, const QString & newText)
 	if (outN[0].row != 0) {
 		for(int n=0; n<outO.size() && outO[n].row == -1; ++n) {
 			QString currentText = outO[n].text + (n >= oSpace ? "" : sp);
-			JS::newLines(ops, currentText);
-			ops.append(qMakePair(Changeset::SkipOverChars, currentText.length()));
+			ops.append(qMakePair(Changeset::SkipOverChars, Changeset::OperationData(currentText.length(), JS::newLines(currentText), -1)));
 		}
 	}
 
@@ -331,9 +339,7 @@ Changeset JS::createChangeset(const QString & oldText, const QString & newText)
 			const QString currentText = outN[i].text + (i >= nSpace ? "" : sp);
 			ops += potentialOps;
 			potentialOps.clear();
-			ops.append(qMakePair(Changeset::Attrib, 0));
-			JS::newLines(ops, currentText);
-			ops.append(qMakePair(Changeset::InsertChars, currentText.length()));
+			ops.append(qMakePair(Changeset::InsertChars, Changeset::OperationData(currentText.length(), JS::newLines(currentText), 0)));
 			bank += currentText;
 		} else {
 			Changeset::Ops dels;
@@ -346,7 +352,7 @@ Changeset JS::createChangeset(const QString & oldText, const QString & newText)
 			//
 			if (nextWordInOldPos < outO.size() && outO[nextWordInOldPos].row == -1 &&
 				i >= nSpace) {
-				dels.append(qMakePair(Changeset::SkipOverChars, 1));;
+				dels.append(qMakePair(Changeset::SkipOverChars, Changeset::OperationData(1, -1, -1)));;
 			}
 			
 			//
@@ -356,8 +362,7 @@ Changeset JS::createChangeset(const QString & oldText, const QString & newText)
 			//
 			for (int n = nextWordInOldPos; n < outO.size() && outO[n].row == -1; ++n) {
 				const QString currentText = outO[n].text + (n >= oSpace ? "" : sp);
-				JS::newLines(dels, currentText);
-				dels.append(qMakePair(Changeset::SkipOverChars, currentText.length()));
+				dels.append(qMakePair(Changeset::SkipOverChars, Changeset::OperationData(currentText.length(), JS::newLines(currentText), -1)));
 			}
 			
 			// Writing Operators
@@ -371,20 +376,17 @@ Changeset JS::createChangeset(const QString & oldText, const QString & newText)
 			if ( (i + 1) < outN.size() && outN[i + 1].row == -1 && 
 					outN[i].row >= oSpace) {
 				//dels = '*0+1' + dels;
-				dels.prepend(qMakePair(Changeset::InsertChars, 1));
-				dels.prepend(qMakePair(Changeset::Attrib, 0));
+				dels.prepend(qMakePair(Changeset::InsertChars, Changeset::OperationData(1, -1, 0)));
 				bank += " ";
 			} else {
 				currentText += (i >= nSpace) ? "" : sp;
 			}
 			if (dels.isEmpty()) {
-				JS::newLines(potentialOps, currentText);
-				potentialOps.append(qMakePair(Changeset::KeepChars, currentText.length()));
+				potentialOps.append(qMakePair(Changeset::KeepChars,  Changeset::OperationData(currentText.length(), JS::newLines(currentText), -1)));
 			} else {
 				ops += potentialOps;
 				potentialOps.clear();
-				JS::newLines(ops, currentText);
-				ops.append(qMakePair(Changeset::KeepChars, currentText.length()));
+				ops.append(qMakePair(Changeset::KeepChars,  Changeset::OperationData(currentText.length(), JS::newLines(currentText), -1)));
 				ops += dels;
 			}
 		}

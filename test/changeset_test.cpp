@@ -74,26 +74,25 @@ private Q_SLOTS:
 	}
 
 #define OPS Changeset::Ops()
-#define INSERT(num)  << qMakePair(Changeset::InsertChars, num)
-#define KEEP(num)    << qMakePair(Changeset::KeepChars, num)
-#define NEWLINE(num) << qMakePair(Changeset::NewLine, num)
-#define ATTRIB(num)  << qMakePair(Changeset::Attrib, num)
+#define INSERT(num, n, a)  << qMakePair(Changeset::InsertChars, Changeset::OperationData(num, n, a))
+#define KEEP(num)          << qMakePair(Changeset::KeepChars,   Changeset::OperationData(num, -1, -1))
+#define KEEPNL(num, n)     << qMakePair(Changeset::KeepChars,   Changeset::OperationData(num, n, -1))
 
 	void changesetToStringTest_data() {
 		QTest::addColumn<QString  >("changesetString");
 		QTest::addColumn<Changeset>("changeset");
 
 		QTest::newRow("Identity (no change)")            << "Z:3>0$"          << Changeset(3, 3, OPS, "");
-		QTest::newRow("Single letter append")            << "Z:2>1=1*0+1$o"   << Changeset(2, 3, OPS KEEP(1) ATTRIB(0) INSERT(1), "o");
-		QTest::newRow("Three letter append")             << "Z:3>3=3*0+3$bar" << Changeset(3, 6, OPS KEEP(3) ATTRIB(0) INSERT(3), "bar");
-		QTest::newRow("Insert at beginning")             << "Z:6>3*0+3$foo"   << Changeset(6, 9, OPS ATTRIB(0) INSERT(3), "foo");
-		QTest::newRow("Three letter insert to center")   << "Z:6>3=3*0+3$bar" << Changeset(6, 9, OPS KEEP(3) ATTRIB(0) INSERT(3), "bar");
+		QTest::newRow("Single letter append")            << "Z:2>1=1*0+1$o"   << Changeset(2, 3, OPS KEEP(1) INSERT(1, -1 , 0), "o");
+		QTest::newRow("Three letter append")             << "Z:3>3=3*0+3$bar" << Changeset(3, 6, OPS KEEP(3) INSERT(3, -1, 0), "bar");
+		QTest::newRow("Insert at beginning")             << "Z:6>3*0+3$foo"   << Changeset(6, 9, OPS INSERT(3, -1, 0), "foo");
+		QTest::newRow("Three letter insert to center")   << "Z:6>3=3*0+3$bar" << Changeset(6, 9, OPS KEEP(3) INSERT(3, -1, 0), "bar");
 		QTest::newRow("Many letter append")              << "Z:3>1r=3*0+1r$barfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobar"
-														 << Changeset(3, 66, OPS KEEP(3) ATTRIB(0) INSERT(63), "barfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobar");
-		QTest::newRow("Empty string append")             << "Z:0>6*0+6$foobar" << Changeset(0, 6, OPS ATTRIB(0) INSERT(6), "foobar");
-		QTest::newRow("Word append")                     << "Z:b>6=4*0+6$extra" << Changeset(11, 17, OPS KEEP(4) ATTRIB(0) INSERT(6), "extra");
-		QTest::newRow("Word append on new line")         << "Z:c>5|1=7*0|1+5$\nbing" << Changeset(12, 17, OPS NEWLINE(1) KEEP(7) ATTRIB(0) NEWLINE(1) INSERT(5), "\nbing");
-		QTest::newRow("Multiple whitespace characters ") << "Z:8>4|1=5*0|1+4$baz\n"  << Changeset(8, 12, OPS NEWLINE(1) KEEP(5) ATTRIB(0) NEWLINE(1) INSERT(4), "baz\n");
+														 << Changeset(3, 66, OPS KEEP(3) INSERT(63, -1, 0), "barfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobarfoobar");
+		QTest::newRow("Empty string append")             << "Z:0>6*0+6$foobar" << Changeset(0, 6, OPS INSERT(6, -1, 0), "foobar");
+		QTest::newRow("Word append")                     << "Z:b>6=4*0+6$extra" << Changeset(11, 17, OPS KEEP(4) INSERT(6, -1, 0), "extra");
+		QTest::newRow("Word append on new line")         << "Z:c>5|1=7*0|1+5$\nbing" << Changeset(12, 17, OPS KEEPNL(7, 1) INSERT(5, 1, 0), "\nbing");
+		QTest::newRow("Multiple whitespace characters ") << "Z:8>4|1=5*0|1+4$baz\n"  << Changeset(8, 12, OPS KEEPNL(5, 1) INSERT(4, 1, 0), "baz\n");
 	}
 	
 	void changesetToStringTest() {

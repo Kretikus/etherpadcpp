@@ -10,7 +10,7 @@
 #define LOG_INFO  Log(LOG_LEVEL_TRACE, __FILE__, __LINE__)
 #define LOG_WARN  Log(LOG_LEVEL_TRACE, __FILE__, __LINE__)
 
-namespace log {
+namespace LogDetails {
 	void output(QByteArray & msg, int val);
 	const char * filenameSubStr(const char * filePath);
 	void writePadded(char ** dest, uint number, int width, char pad = ' ');
@@ -28,7 +28,7 @@ public:
 			for(int i = 0; i < strLen; ++i) {
 				const char * pStr = str + i;
 				if (*pStr == '%' && strLen >= i+3 && *(pStr+1) == '1' && *(pStr+2) == '%') {
-					log::output(msg, t1);
+					LogDetails::output(msg, t1);
 					i += 2;
 				} else {
 					msg.append(*pStr);
@@ -45,8 +45,8 @@ public:
 					const char * pStr = str + i;
 					if (*pStr == '%' && strLen >= i+3 && *(pStr+2) == '%') {
 						const char placeHolder = *(pStr+1);
-						if (placeHolder == '1') { log::output(msg, t1); }
-						else if (placeHolder == '2') { log::output(msg, t2); }
+						if (placeHolder == '1') { LogDetails::output(msg, t1); }
+						else if (placeHolder == '2') { LogDetails::output(msg, t2); }
 						else qDebug("Unexpected placeholder '%c'", placeHolder);
 						i += 2;
 					} else {

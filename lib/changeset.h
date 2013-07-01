@@ -3,7 +3,7 @@
 #include <QString>
 #include <QPair>
 #include <QMap>
-#include <Qvector>
+#include <QVector>
 
 class QJsonObject;
 
@@ -29,14 +29,24 @@ private:
 class Changeset
 {
 public:
+
+	class OperationData
+	{
+	public:
+		OperationData() : opLength(-1), newlines(-1), attrib(-1) {}
+		OperationData(int opLength, int newLines, int attrib)
+			: opLength(opLength), newlines(newLines), attrib(attrib) {}
+		int opLength;
+		int newlines;
+		int attrib;
+	};
+
 	enum Operation {
 		InsertChars,    // +
 		SkipOverChars,  // -
-		KeepChars,      // =
-		NewLine,        // |
-		Attrib          // *
+		KeepChars       // =
 	};
-	typedef QPair<Operation, int> Op;
+	typedef QPair<Operation, OperationData> Op;
 	typedef QVector<Op> Ops;
 
 	Changeset() : oldLength_(), newLength_() {}
@@ -64,7 +74,7 @@ Changeset createChangeset(const QString & oldText, const QString & newText);
 
 
 namespace JS {
-void newLines(Changeset::Ops ops, const QString & text);
+int newLines(const QString & text);
 
 class DiffOutData {
 public:

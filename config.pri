@@ -49,6 +49,7 @@ QMAKE_LIBDIR += $${LIB_DIR} $${EXT_LIB_DIR}
 DESTDIR       = $${BIN_DIR}
 
 QMAKE_CXXFLAGS += -std=c++11
+QMAKE_LFLAGS += -std=c++11
 
 defineTest(initLib) {
         TEMPLATE = lib
