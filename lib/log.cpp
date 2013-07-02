@@ -8,6 +8,10 @@ void LogDetails::output(QByteArray & msg, int val) {
 	msg.append( QString::number(val) );
 }
 
+void LogDetails::output(QByteArray & msg, const QString & val) {
+	msg.append( val );
+}
+
 const char * LogDetails::filenameSubStr(const char * filePath)
 {
 	// strategy: Find last / or

@@ -15,6 +15,7 @@
 
 namespace LogDetails {
 	void output(QByteArray & msg, int val);
+	void output(QByteArray & msg, const QString & val);
 	const char * filenameSubStr(const char * filePath);
 	void writePadded(char ** dest, uint number, int width, char pad = ' ');
 }

@@ -37,7 +37,7 @@ static QChar getOperationChar(Changeset::Operation op) {
 		case Changeset::SkipOverChars: return '-';
 		case Changeset::KeepChars:     return '=';
 	}
-	LOG_HALT("Called with unknown Changeset::Operation");
+	LOG_HALT("Called with unknown Changeset::Operation %1%", (int)op);
 	return QChar();
 }
 
@@ -337,6 +337,7 @@ Changeset JS::optimizeChangeset(const QString & oldText, const Changeset & chang
 		newChangeset = JS::collapse(newChangeset);
 		newChangeset = JS::optimize(newChangeset, oldText);
 		newChangeset = JS::collapse(newChangeset);
+		LOG_TRACE("%1% --> %2%", beforeOptimizing.toString(), newChangeset.toString());
 	} while(newChangeset != beforeOptimizing);
 	return newChangeset;
 }
@@ -447,7 +448,7 @@ Changeset JS::createChangeset(const QString & oldText, const QString & newText)
 Changeset JS::optimize(const Changeset & changeset, const QString & oldText) 
 {
 	QString changesetBank = changeset.bank_;
-	
+
 	QString text = oldText;
 
 	Changeset optimized(changeset.oldLength_, changeset.newLength_, Changeset::Ops(), QString());
@@ -518,7 +519,7 @@ Changeset JS::optimize(const Changeset & changeset, const QString & oldText)
 			//console.log(JSON.stringify({i: i, partlen: part.len}));
 			//console.log(pot);
 			changesetBank = changesetBank.mid(i + it->second.opLength + len);
-			prevPart = changeset.ops_.end();
+			prevPart = opsEnd;
 		} else {
 			if (prevPart != opsEnd) {
 				//unoptimized '-' op
@@ -542,10 +543,9 @@ Changeset JS::optimize(const Changeset & changeset, const QString & oldText)
 			}
 		}
 	}
-	if (prevPart)
+	if (prevPart != opsEnd) {
 		optimized.ops_.push_back(*prevPart);
-
-	//console.log("--End Optimize--");
+	}
 
 	return optimized;
 }

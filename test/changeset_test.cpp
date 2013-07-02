@@ -53,7 +53,7 @@ private Q_SLOTS:
 		QTest::addColumn<QString>("result");
 		QTest::addColumn<QString>("changeset");
 
-		QTest::newRow("Identity (no change)")          << "foo" << "foo" << "Z:3>0$";
+//		QTest::newRow("Identity (no change)")          << "foo" << "foo" << "Z:3>0$";
 		QTest::newRow("Single letter append")          << "fo" << "foo" << "Z:2>1=1*0+1$o";
 		QTest::newRow("Three letter append")           << "foo" << "foobar" << "Z:3>3=3*0+3$bar";
 		QTest::newRow("Insert at beginning")           << "barbaz" << "foobarbaz" << "Z:6>3*0+3$foo";
