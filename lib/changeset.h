@@ -42,6 +42,9 @@ public:
 		bool operator !=(const OperationData & rhs) const {
 				return !operator==(rhs);
 		}
+
+		QString toString() const;
+
 	public:
 		int opLength;
 		int newlines;
@@ -81,12 +84,6 @@ public:
 	Ops ops_;
 	QString bank_;
 };
-
-namespace detail {
-int getMaxPrefix(const QStringRef & oldText, const QStringRef & newText);
-int getCharDeleteCount(const QStringRef & oldText, const QStringRef & newText);
-Changeset optimizeChangeset(const Changeset & changeset, const QString & oldText, const QString & newText);
-}
 
 Changeset createChangeset(const QString & oldText, const QString & newText);
 
