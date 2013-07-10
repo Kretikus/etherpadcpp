@@ -466,6 +466,7 @@ QString applyChangeset(const QString & oldText, const Changeset & changeset)
 	return ret;
 }
 
+<<<<<<< HEAD
 
 /*
 // %CLIENT FILE ENDS HERE%
@@ -612,4 +613,85 @@ exports.follow = function (cs1, cs2, reverseInsertOrder, pool) {
   return exports.pack(oldLen, newLen, newOps, unpacked2.charBank);
 };
 */
+
+/*
+  var rem_len = function(part, bank, len) {
+    //count the newlines
+    if (part.op == '+') {
+        part.newlines -= bank.substring(0, len).split('\n').length-1;
+    } else {
+        part.newlines -= baseDoc.substring(pos, len).split('\n').length-1;
+    }
+    part.len -= len;
+  }
+*/
+
+QString JS::mergeChangeset(const QString & base, const QString & changeset1, const QString & changeset2)
+{
+	const Changeset cs1 = Changeset::fromString(changeset1);
+	const Changeset cs2 = Changeset::fromString(changeset2);
+
+	Changeset::Ops::ConstIterator it1 = cs1.ops_.begin();
+	Changeset::Ops::ConstIterator it2 = cs2.ops_.begin();
+
+	Changeset merged;
+	int newLen = 0;
+
+	//When an operation occurs at the same position...
+	// = = | skip
+	// = + | insert the text
+	// = - | remove the text
+	// + + | insert cs2 changes after cs1 (this will increase the length of the document)
+	// - - | combine events into single deletion (max of two lengths)
+	// + - | replace deleted text with addition (Perform deletion and then addition)
+
+	while (it1 != cs1.ops_.end() && it2 != cs2.ops_.end())
+	{
+		const int op1Len = it1->second.opLength;
+		const int op2Len = it2->second.opLength;
+		if (it1->first == Changeset::KeepChars || it2->first == Changeset::KeepChars) {
+			if (it1->first == Changeset::KeepChars && it2->first == Changeset::KeepChars) {
+				// = =
+				int dPos = 0;
+				if (op1Len == op2Len) {
+					merged.ops_.push_back(*it1);
+					dPos = op1Len;
+					++it1;
+					++it2;
+				} else if (op1Len < op2Len) {
+					merged.ops_.push_back(*it1);
+					dPos = op1Len;
+					//rem_len(part2, parsed2.bank, dPos);
+					++it1;
+				} else {
+					merged.ops_.push_back(*it2);
+					dPos = op2Len;
+					//rem_len(part1, parsed1.bank, dPos);
+					++it2;
+				}
+			}
+		} else if (it1->first == Changeset::InsertChars && it2->first == Changeset::InsertChars) {
+			// + +
+			merged.ops_.push_back(*it1);
+			//mergedBank += parsed1.bank.substring(0, part1.len);
+			newLen += op1Len;
+			++it1;
+			//append second addition
+			merged.ops_.push_back(*it2);
+			//mergedBank += parsed2.bank.substring(0, part2.len);
+			newLen += op2Len;
+			++it2;
+		} else if (it1->first == Changeset::SkipOverChars && it2->first == Changeset::SkipOverChars) {
+			// - -
+		}
+
+		++it1;
+		++it2;
+	}
+
+	merged.oldLength_ = cs1.oldLength_;
+	merged.newLength_ = merged.oldLength_ + newLen;
+
+	return merged.toString();
+}
 
