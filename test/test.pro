@@ -8,8 +8,9 @@ CONFIG += console
 HEADERS += testutil.h
 
 SOURCES += \
-	changeset_test.cpp \
+	changeset_apply_test.cpp \
 	changeset_create_test.cpp \
+	changeset_test.cpp \
 	etherpadapi_test.cpp \
 	main.cpp \
 	testutil.cpp \

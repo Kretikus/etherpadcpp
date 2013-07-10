@@ -86,7 +86,7 @@ public:
 };
 
 Changeset createChangeset(const QString & oldText, const QString & newText);
-
+QString applyChangeset(const QString & oldText, const Changeset & changeset);
 
 namespace JS {
 

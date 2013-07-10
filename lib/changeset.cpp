@@ -440,3 +440,25 @@ Changeset JS::optimize(const Changeset & changeset, const QString & oldText)
 	return optimized;
 }
 
+QString applyChangeset(const QString & oldText, const Changeset & changeset)
+{
+	QString ret = oldText;
+
+	int pos = 0;
+	int bankPos = 0;
+	Q_FOREACH(const Changeset::Op & op, changeset.ops_) {
+		if (op.first == Changeset::KeepChars) {
+			pos += op.second.opLength;
+		} else if (op.first == Changeset::InsertChars) {
+			const int len = op.second.opLength;
+			const QString insStr = changeset.bank_.mid(bankPos, len);
+			ret.insert(pos, insStr);
+			pos += len;
+			bankPos += len;
+		} else if (op.first == Changeset::SkipOverChars) {
+			ret.remove(pos, op.second.opLength);
+		}
+	}
+
+	return ret;
+}
