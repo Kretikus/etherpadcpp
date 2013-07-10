@@ -236,7 +236,7 @@ Changeset JS::optimizeChangeset(const QString & oldText, const Changeset & chang
 		newChangeset = JS::collapse(newChangeset);
 		newChangeset = JS::optimize(newChangeset, oldText);
 		newChangeset = JS::collapse(newChangeset);
-	} while(newChangeset != beforeOptimizing);
+	} while (newChangeset != beforeOptimizing);
 	return newChangeset;
 }
 

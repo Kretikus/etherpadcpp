@@ -9,6 +9,7 @@ HEADERS += testutil.h
 
 SOURCES += \
 	changeset_test.cpp \
+	changeset_create_test.cpp \
 	etherpadapi_test.cpp \
 	main.cpp \
 	testutil.cpp \
