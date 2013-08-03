@@ -9,7 +9,7 @@ CollabEditor::CollabEditor(QWidget *parent)
 {
 	QTimer * timer = new QTimer(this);
 	connect(timer, SIGNAL(timeout()), SLOT(createChangeset()));
-	timer->start(1000);
+	timer->start(250);
 }
 
 void CollabEditor::createChangeset()
@@ -19,5 +19,6 @@ void CollabEditor::createChangeset()
 		const Changeset set = ::createChangeset(lastContent_, newContent);
 		qDebug("CS: %s", qPrintable(set.toString()));
 		lastContent_ = newContent;
+		emit newChangeset(set);
 	}
 }

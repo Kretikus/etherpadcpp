@@ -128,11 +128,11 @@ Changeset createChangeset(const QString & oldText, const QString & newText)
 {
 	Changeset result = JS::createChangeset(oldText, newText);
 	result = JS::optimizeChangeset(oldText, result);
-	
+
 	//	if (applyChangeset(oldText, result) != newText) {
 	//		func = alert;
 	//		//func = console.log;
-	//		func("Changeset Generation Failed! Application yields '" + 
+	//		func("Changeset Generation Failed! Application yields '" +
 	//			  applyChangeset(oldText, result) + "' instead of '" + newText + "'");
 	//	}
 	return result;
@@ -186,8 +186,8 @@ QPair<JS::DiffOut,JS::DiffOut> JS::diff(const QStringList & oldTextLines, const 
 		}
 	}
 	for(int i=nDo.size(); i>0; --i){
-		if(isValid(nDo, i) && isValid(nDo, i-1) && nDo[i].row > 0 && 
-		   isValid(oDo, nDo[i].row-1) && nDo[i-1] == oDo[nDo[i].row-1]) 
+		if(isValid(nDo, i) && isValid(nDo, i-1) && nDo[i].row > 0 &&
+		   isValid(oDo, nDo[i].row-1) && nDo[i-1] == oDo[nDo[i].row-1])
 		{
 			nDo[i-1] = DiffOutData(newTextLines[i-1], nDo[i].row-1);
 			oDo[nDo[i].row-1] = DiffOutData(oldTextLines[nDo[i].row-1], i-1);
@@ -210,7 +210,7 @@ Changeset JS::collapse(const Changeset & changeset)
 	for (auto it = changeset.ops_.begin(); it != changeset.ops_.end(); ++it)
 	{
 		const auto nextIt = it + 1;
-		
+
 		if (nextIt != changeset.ops_.end() && it->first == nextIt->first) {
 			Changeset::Op collapsedOp = *it;
 			collapsedOp.second.opLength += nextIt->second.opLength;
@@ -244,16 +244,19 @@ Changeset JS::createChangeset(const QString & oldText, const QString & newText)
 {
 	if (oldText.isEmpty() && newText.isEmpty()) return Changeset();
 
+	if (newText.isEmpty()) {
+		return Changeset(oldText.length(), 0, Changeset::Ops() << qMakePair(Changeset::SkipOverChars, Changeset::OperationData(oldText.length(), -1, -1)), QString());
+	}
+
 	QStringList oldList = oldText.isEmpty() ? QStringList() : oldText.split(" ");
 	QStringList newList = newText.isEmpty() ? QStringList() : newText.split(" ");
-	
+
 	QPair<JS::DiffOut, JS::DiffOut> out = JS::diff(oldList, newList);
 
 	Changeset::Ops ops;
 
 	int oSpace = oldText.count(" ");
 	int nSpace = newText.count(" ");
-
 	JS::DiffOut & outO = out.first;
 	JS::DiffOut & outN = out.second;
 
@@ -286,7 +289,7 @@ Changeset JS::createChangeset(const QString & oldText, const QString & newText)
 			int nextWordInOldPos = outN[i].row + 1;
 
 			// Deletion Check
-			// 
+			//
 			// If the next word has been deleted from the old text, check to see
 			// if we're also missing the space following this word
 			//
@@ -294,7 +297,7 @@ Changeset JS::createChangeset(const QString & oldText, const QString & newText)
 				i >= nSpace) {
 				dels.append(qMakePair(Changeset::SkipOverChars, Changeset::OperationData(1, -1, -1)));;
 			}
-			
+
 			//
 			// Check old text tokens starting with the one corresponding to the position
 			// after our current word, and for each of them that's deleted, append
@@ -304,7 +307,7 @@ Changeset JS::createChangeset(const QString & oldText, const QString & newText)
 				const QString currentText = outO[n].text + (n >= oSpace ? "" : sp);
 				dels.append(qMakePair(Changeset::SkipOverChars, Changeset::OperationData(currentText.length(), JS::newLines(currentText), -1)));
 			}
-			
+
 			// Writing Operators
 
 			//
@@ -313,7 +316,7 @@ Changeset JS::createChangeset(const QString & oldText, const QString & newText)
 			// operators into the changeset, followed by the deletion operators
 			//
 			QString currentText = outN[i].text;
-			if ( (i + 1) < outN.size() && outN[i + 1].row == -1 && 
+			if ( (i + 1) < outN.size() && outN[i + 1].row == -1 &&
 					outN[i].row >= oSpace) {
 				//dels = '*0+1' + dels;
 				dels.prepend(qMakePair(Changeset::InsertChars, Changeset::OperationData(1, -1, 0)));
@@ -335,7 +338,7 @@ Changeset JS::createChangeset(const QString & oldText, const QString & newText)
 	return Changeset(oldText.length(), newText.length(), ops, bank);
 }
 
-Changeset JS::optimize(const Changeset & changeset, const QString & oldText) 
+Changeset JS::optimize(const Changeset & changeset, const QString & oldText)
 {
 	QString changesetBank = changeset.bank_;
 
@@ -407,7 +410,7 @@ Changeset JS::optimize(const Changeset & changeset, const QString & oldText)
 			if (newOpPost.second.opLength > 0) {
 				optimized.ops_.push_back(newOpPost);
 			}
-		
+
 			optimized.bank_ += changesetBank.mid(i, curOp.second.opLength);
 			changesetBank = changesetBank.mid(i + curOp.second.opLength + len);
 			prevPart = opsEnd;
@@ -462,3 +465,151 @@ QString applyChangeset(const QString & oldText, const Changeset & changeset)
 
 	return ret;
 }
+
+
+/*
+// %CLIENT FILE ENDS HERE%
+exports.follow = function (cs1, cs2, reverseInsertOrder, pool) {
+  var unpacked1 = exports.unpack(cs1);
+  var unpacked2 = exports.unpack(cs2);
+  var len1 = unpacked1.oldLen;
+  var len2 = unpacked2.oldLen;
+  exports.assert(len1 == len2, "mismatched follow");
+  var chars1 = exports.stringIterator(unpacked1.charBank);
+  var chars2 = exports.stringIterator(unpacked2.charBank);
+
+  var oldLen = unpacked1.newLen;
+  var oldPos = 0;
+  var newLen = 0;
+
+  var hasInsertFirst = exports.attributeTester(['insertorder', 'first'], pool);
+
+  var newOps = exports.applyZip(unpacked1.ops, 0, unpacked2.ops, 0, function (op1, op2, opOut) {
+	if (op1.opcode == '+' || op2.opcode == '+') {
+	  var whichToDo;
+	  if (op2.opcode != '+') {
+		whichToDo = 1;
+	  } else if (op1.opcode != '+') {
+		whichToDo = 2;
+	  } else {
+		// both +
+		var firstChar1 = chars1.peek(1);
+		var firstChar2 = chars2.peek(1);
+		var insertFirst1 = hasInsertFirst(op1.attribs);
+		var insertFirst2 = hasInsertFirst(op2.attribs);
+		if (insertFirst1 && !insertFirst2) {
+		  whichToDo = 1;
+		} else if (insertFirst2 && !insertFirst1) {
+		  whichToDo = 2;
+		}
+		// insert string that doesn't start with a newline first so as not to break up lines
+		else if (firstChar1 == '\n' && firstChar2 != '\n') {
+		  whichToDo = 2;
+		} else if (firstChar1 != '\n' && firstChar2 == '\n') {
+		  whichToDo = 1;
+		}
+		// break symmetry:
+		else if (reverseInsertOrder) {
+		  whichToDo = 2;
+		} else {
+		  whichToDo = 1;
+		}
+	  }
+	  if (whichToDo == 1) {
+		chars1.skip(op1.chars);
+		opOut.opcode = '=';
+		opOut.lines = op1.lines;
+		opOut.chars = op1.chars;
+		opOut.attribs = '';
+		op1.opcode = '';
+	  } else {
+		// whichToDo == 2
+		chars2.skip(op2.chars);
+		exports.copyOp(op2, opOut);
+		op2.opcode = '';
+	  }
+	} else if (op1.opcode == '-') {
+	  if (!op2.opcode) {
+		op1.opcode = '';
+	  } else {
+		if (op1.chars <= op2.chars) {
+		  op2.chars -= op1.chars;
+		  op2.lines -= op1.lines;
+		  op1.opcode = '';
+		  if (!op2.chars) {
+			op2.opcode = '';
+		  }
+		} else {
+		  op1.chars -= op2.chars;
+		  op1.lines -= op2.lines;
+		  op2.opcode = '';
+		}
+	  }
+	} else if (op2.opcode == '-') {
+	  exports.copyOp(op2, opOut);
+	  if (!op1.opcode) {
+		op2.opcode = '';
+	  } else if (op2.chars <= op1.chars) {
+		// delete part or all of a keep
+		op1.chars -= op2.chars;
+		op1.lines -= op2.lines;
+		op2.opcode = '';
+		if (!op1.chars) {
+		  op1.opcode = '';
+		}
+	  } else {
+		// delete all of a keep, and keep going
+		opOut.lines = op1.lines;
+		opOut.chars = op1.chars;
+		op2.lines -= op1.lines;
+		op2.chars -= op1.chars;
+		op1.opcode = '';
+	  }
+	} else if (!op1.opcode) {
+	  exports.copyOp(op2, opOut);
+	  op2.opcode = '';
+	} else if (!op2.opcode) {
+	  // @NOTE: Critical bugfix for EPL issue #1625. We do not copy op1 here
+	  // in order to prevent attributes from leaking into result changesets.
+	  // exports.copyOp(op1, opOut);
+	  op1.opcode = '';
+	} else {
+	  // both keeps
+	  opOut.opcode = '=';
+	  opOut.attribs = exports.followAttributes(op1.attribs, op2.attribs, pool);
+	  if (op1.chars <= op2.chars) {
+		opOut.chars = op1.chars;
+		opOut.lines = op1.lines;
+		op2.chars -= op1.chars;
+		op2.lines -= op1.lines;
+		op1.opcode = '';
+		if (!op2.chars) {
+		  op2.opcode = '';
+		}
+	  } else {
+		opOut.chars = op2.chars;
+		opOut.lines = op2.lines;
+		op1.chars -= op2.chars;
+		op1.lines -= op2.lines;
+		op2.opcode = '';
+	  }
+	}
+	switch (opOut.opcode) {
+	case '=':
+	  oldPos += opOut.chars;
+	  newLen += opOut.chars;
+	  break;
+	case '-':
+	  oldPos += opOut.chars;
+	  break;
+	case '+':
+	  newLen += opOut.chars;
+	  break;
+	}
+  });
+  newLen += oldLen - oldPos;
+
+  return exports.pack(oldLen, newLen, newOps, unpacked2.charBank);
+};
+*/
+
