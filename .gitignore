@@ -11,3 +11,9 @@
 *.lai
 *.la
 *.a
+
+Makefile
+*.pro.user*
+local.pri
+build/
+bin/
